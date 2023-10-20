@@ -7,8 +7,8 @@ import torch.nn.functional as F
 class Block(nn.Module):
     def __init__(self, in_ch, out_ch):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_ch, out_ch, 3)
-        self.conv2 = nn.Conv2d(out_ch, out_ch, 3)
+        self.conv1 = nn.Conv2d(in_ch, out_ch, 3, padding=1)
+        self.conv2 = nn.Conv2d(out_ch, out_ch, 3, padding=1)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -17,7 +17,7 @@ class Block(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, chs=(12, 64, 128, 256, 512)):
+    def __init__(self, chs=(12, 64, 128, 256)):
         super().__init__()
         self.blocks = nn.ModuleList(
             [Block(chs[i], chs[i + 1]) for i in range(len(chs) - 1)]
@@ -26,17 +26,18 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         outputs = []
-        for block in self.blocks:
+        for i, block in enumerate(self.blocks):
             x = block(x)
             outputs.append(x)
 
-            # TODO: avoid pooling last output to save compute
-            x = self.pool(x)
+            # No need to pool last block output
+            if i != len(self.blocks) - 1:
+                x = self.pool(x)
         return outputs
 
 
 class Decoder(nn.Module):
-    def __init__(self, chs=(512, 256, 128, 64)):
+    def __init__(self, chs=(256, 128, 64)):
         super().__init__()
         self.chs = chs
         self.upconvs = nn.ModuleList(
@@ -51,12 +52,12 @@ class Decoder(nn.Module):
         for i, block in enumerate(self.blocks):
             x = self.upconvs[i](x)
             cropped_output = self.crop(encoder_outputs[-i - 2], x)
-            x = torch.cat([x, cropped_output], dim=0)
+            x = torch.cat([x, cropped_output], dim=1)
             x = block(x)
         return x
 
     def crop(self, encoder_output, x):
-        _, H, W = x.shape
+        _, _, H, W = x.shape
         cropped_output = torchvision.transforms.CenterCrop([H, W])(encoder_output)
         return cropped_output
 
@@ -64,8 +65,8 @@ class Decoder(nn.Module):
 class UNet(nn.Module):
     def __init__(
         self,
-        enc_chs=(12, 64, 128, 256, 512),
-        dec_chs=(512, 256, 128, 64),
+        enc_chs=(12, 64, 128, 256),
+        dec_chs=(256, 128, 64),
         num_class=1,
     ):
         super().__init__()

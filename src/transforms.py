@@ -8,4 +8,8 @@ class TargetNormalize(object):
 
     def __call__(self, value):
         value = (value - self.mean) / self.std
+        return value.astype("float32")
+
+    def revert(self, value):
+        value = value * self.std + self.mean
         return value

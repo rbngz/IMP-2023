@@ -1,6 +1,12 @@
 # Large image datasets
-data/sentinel-2/*
-!data/sentinel-2/.gitkeep 
+data/sentinel-2-eea/*
+!data/sentinel-2-eea/.gitkeep 
+data/sentinel-2-epa/*
+!data/sentinel-2-epa/.gitkeep 
+
+# Mac specific files
+.DS_Store
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
