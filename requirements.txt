@@ -3,3 +3,7 @@ pandas
 torch
 torchvision
 matplotlib
+scikit-image
+tqdm
+lightning
+wandb

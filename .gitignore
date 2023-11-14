@@ -3,6 +3,8 @@ data/sentinel-2-eea/*
 !data/sentinel-2-eea/.gitkeep 
 data/sentinel-2-epa/*
 !data/sentinel-2-epa/.gitkeep 
+data/sentinel-5p-epa/*
+!data/sentinel-2-epa/.gitkeep 
 
 # Mac specific files
 .DS_Store

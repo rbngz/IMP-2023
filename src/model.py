@@ -17,7 +17,7 @@ class Block(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, chs=(12, 64, 128, 256)):
+    def __init__(self, chs=(12, 64, 128, 256, 512, 1024)):
         super().__init__()
         self.blocks = nn.ModuleList(
             [Block(chs[i], chs[i + 1]) for i in range(len(chs) - 1)]
@@ -37,7 +37,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, chs=(256, 128, 64)):
+    def __init__(self, chs=(1024, 512, 256, 128, 64)):
         super().__init__()
         self.chs = chs
         self.upconvs = nn.ModuleList(
@@ -51,7 +51,7 @@ class Decoder(nn.Module):
     def forward(self, x, encoder_outputs):
         for i, block in enumerate(self.blocks):
             x = self.upconvs[i](x)
-            cropped_output = self.crop(encoder_outputs[-i - 2], x)
+            cropped_output = self.crop(encoder_outputs[i], x)
             x = torch.cat([x, cropped_output], dim=1)
             x = block(x)
         return x
@@ -65,8 +65,8 @@ class Decoder(nn.Module):
 class UNet(nn.Module):
     def __init__(
         self,
-        enc_chs=(12, 64, 128, 256),
-        dec_chs=(256, 128, 64),
+        enc_chs=(12, 64, 128, 256, 512, 1024),
+        dec_chs=(1024, 512, 256, 128, 64),
         num_class=1,
     ):
         super().__init__()
@@ -76,6 +76,8 @@ class UNet(nn.Module):
 
     def forward(self, x):
         encoder_outputs = self.encoder.forward(x)
-        output = self.decoder.forward(encoder_outputs[-1], encoder_outputs)
+        output = self.decoder.forward(
+            encoder_outputs[::-1][0], encoder_outputs[::-1][1:]
+        )
         output = self.head(output)
         return output
