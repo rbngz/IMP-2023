@@ -1,6 +1,5 @@
 import os
 import random
-import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset
 from skimage.transform import resize
@@ -10,7 +9,7 @@ from tqdm import tqdm
 class SentinelDataset(Dataset):
     def __init__(
         self,
-        samples_file_path,
+        df_samples,
         data_dir,
         n_patches=4,
         patch_size=256,
@@ -19,13 +18,6 @@ class SentinelDataset(Dataset):
     ) -> None:
         super().__init__()
         """Dataset that contains n patches per satellite image"""
-
-        # Read the samples file
-        df_samples = pd.read_csv(samples_file_path, index_col="idx")
-
-        # Remove NA measurements
-        df_samples = df_samples[~df_samples["no2"].isna()]
-
         # Store samples information
         self.df_samples = df_samples
 

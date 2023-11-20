@@ -1,44 +1,34 @@
 import os
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from matplotlib.patches import Circle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from torch.utils.data import Subset
 
 
-def get_dataset_stats(dataset):
-    # Make sure this can be applied also to subsets
-    if isinstance(dataset, Subset):
-        dataset_root = dataset.dataset
-    else:
-        dataset_root = dataset
+def get_dataset_stats(df, data_dir):
+    # Placeholder to store all images from df
+    img_list = np.empty((len(df), 200, 200, 12))
 
-    # Create empty array to store band information
-    patch_list = np.empty(
-        (len(dataset), 12, dataset_root.patch_size, dataset_root.patch_size)
-    )
+    # Iterate over entire dataframe
+    for i, (_, data) in tqdm(enumerate(df.iterrows())):
+        # Load satellite image
+        img_path = data["img_path"]
+        img_path = os.path.join(data_dir, img_path)
+        img = np.load(img_path)
 
-    # Create empty array to store no2 data
-    no2_list = np.empty(len(dataset))
+        # Store satellite image
+        img_list[i] = img
 
-    # Get every patch of dataset or subset
-    for i in tqdm(range(len(dataset))):
-        patch, no2, _ = dataset[i]
+    # Compute mean and std over all bands and images
+    band_means = img_list.mean(axis=(0, 1, 2))
+    band_stds = img_list.std(axis=(0, 1, 2))
 
-        # Store either the entire batch or only the band means
-        patch_list[i] = patch
-        no2_list[i] = no2
+    # Compute mean and std for no2 measurements
+    no2_mean = df["no2"].mean()
+    no2_std = df["no2"].std()
 
-    # Compute mean and std over all images and bands
-    band_means = patch_list.mean(axis=(0, 2, 3))
-    band_stds = patch_list.std(axis=(0, 2, 3))
-
-    # Compute mean and std over all measurements
-    no2_mean = no2_list.mean()
-    no2_std = no2_list.std()
-
+    # Store information in dictionary
     stats = {
         "band_means": band_means,
         "band_stds": band_stds,
@@ -46,31 +36,6 @@ def get_dataset_stats(dataset):
         "no2_std": no2_std,
     }
     return stats
-
-
-class DatasetStatistics:
-    def __init__(self, samples_file, data_dir):
-        samples_df = pd.read_csv(samples_file, index_col="idx")
-
-        # Remove NA measurements
-        samples_df = samples_df[~samples_df["no2"].isna()]
-
-        no2_measurements = samples_df["no2"]
-        data_paths = samples_df["img_path"]
-
-        band_means_sums = np.zeros((12,))
-        band_stds_sums = np.zeros((12,))
-        for idx in data_paths.index:
-            data_path = os.path.join(data_dir, data_paths.loc[idx])
-            data = np.load(data_path)
-            band_means_sums += data.mean(axis=(0, 1))
-            band_stds_sums += data.std(axis=(0, 1))
-
-        self.band_means = band_means_sums / len(data_paths)
-        self.band_std = band_stds_sums / len(data_paths)
-
-        self.no2_mean = no2_measurements.mean()
-        self.no2_std = no2_measurements.std()
 
 
 def normalize_rgb_bands(rgb_bands):
