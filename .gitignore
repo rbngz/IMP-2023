@@ -6,6 +6,10 @@ data/sentinel-2-epa/*
 data/sentinel-5p-epa/*
 !data/sentinel-2-epa/.gitkeep 
 
+# wandb logs
+src/IMP-2023
+src/wandb
+
 # Mac specific files
 .DS_Store
 

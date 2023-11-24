@@ -40,9 +40,12 @@ def get_dataset_stats(df, data_dir):
 
 def normalize_rgb_bands(rgb_bands):
     # Scale RGB bands to be within the range of [0, 1]
-    rgb_min = rgb_bands.min(axis=(0, 1))
-    rgb_max = rgb_bands.max(axis=(0, 1))
+    rgb_min = np.percentile(rgb_bands, 2, axis=(0, 1))
+    rgb_max = np.percentile(rgb_bands, 98, axis=(0, 1))
+
     rgb_bands_norm = (rgb_bands - rgb_min) / (rgb_max - rgb_min)
+
+    rgb_bands_norm = np.clip(rgb_bands_norm, 0, 1)
 
     return rgb_bands_norm
 

@@ -7,8 +7,8 @@ import torch.nn.functional as F
 class Block(nn.Module):
     def __init__(self, in_ch, out_ch):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_ch, out_ch, 3, padding=1)
-        self.conv2 = nn.Conv2d(out_ch, out_ch, 3, padding=1)
+        self.conv1 = nn.Conv2d(in_ch, out_ch, 3)  # , padding=1)
+        self.conv2 = nn.Conv2d(out_ch, out_ch, 3)  # , padding=1)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -73,6 +73,17 @@ class UNet(nn.Module):
         self.encoder = Encoder(enc_chs)
         self.decoder = Decoder(dec_chs)
         self.head = nn.Conv2d(dec_chs[-1], num_class, 1)
+
+    def get_output_dim(self, input_dim: int):
+        output_dim = input_dim
+        for _ in range(len(self.enc_chs) - 2):
+            output_dim -= 4
+            output_dim = output_dim // 2
+        output_dim -= 4
+        for _ in range(len(self.dec_chs) - 1):
+            output_dim *= 2
+            output_dim -= 4
+        return output_dim
 
     def forward(self, x):
         encoder_outputs = self.encoder.forward(x)

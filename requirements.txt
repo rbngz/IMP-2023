@@ -7,3 +7,4 @@ scikit-image
 tqdm
 lightning
 wandb
+torchsummary
