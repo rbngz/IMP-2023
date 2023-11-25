@@ -14,7 +14,7 @@ def get_dataset_stats(df, data_dir):
     for i, (_, data) in tqdm(enumerate(df.iterrows())):
         # Load satellite image
         img_path = data["img_path"]
-        img_path = os.path.join(data_dir, img_path)
+        img_path = os.path.join(data_dir, "sentinel-2-eea", img_path)
         img = np.load(img_path)
 
         # Store satellite image

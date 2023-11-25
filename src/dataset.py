@@ -94,7 +94,9 @@ class SentinelDataset(Dataset):
 
     def get_full_image(self, index):
         # Load data from path according to image index
-        img_path = os.path.join(self.data_dir, self.img_paths.iloc[index])
+        img_path = os.path.join(
+            self.data_dir, "sentinel-2-eea", self.img_paths.iloc[index]
+        )
         img = np.load(img_path).astype(np.float32)
         return img
 
