@@ -54,8 +54,45 @@ print(
 )
 
 # Get statistics for normalization
-stats_train = get_dataset_stats(df_train, DATA_DIR)
-print(stats_train)
+# stats_train = get_dataset_stats(df_train, DATA_DIR)
+# print(stats_train)
+stats_train = {
+    "band_means": np.array(
+        [
+            951.7304533,
+            887.65642278,
+            672.43460609,
+            2309.22885705,
+            1283.86024167,
+            1971.3361798,
+            2221.09058264,
+            2375.07350295,
+            2061.81996558,
+            1556.39466485,
+            565.24740146,
+            2376.78314149,
+        ]
+    ),
+    "band_stds": np.array(
+        [
+            669.08142084,
+            533.01636366,
+            490.84281537,
+            1003.74872792,
+            591.48734924,
+            739.32762934,
+            879.07018525,
+            945.72499154,
+            813.62533688,
+            756.78103222,
+            325.27273547,
+            869.95854887,
+        ]
+    ),
+    "no2_mean": 20.973578214241755,
+    "no2_std": 11.575741710970245,
+}
+
 
 # Create normalizers for bands and NO2 measurements
 band_normalize = BandNormalize(stats_train["band_means"], stats_train["band_stds"])
@@ -106,15 +143,15 @@ dataloader_train = DataLoader(
     dataset_train,
     batch_size=config["BATCH_SIZE"],
     shuffle=True,
-    num_workers=9,
-    persistent_workers=False,
+    num_workers=12,
+    persistent_workers=True,
 )
 dataloader_val = DataLoader(
     dataset_val,
     batch_size=config["BATCH_SIZE"],
     shuffle=False,
-    num_workers=9,
-    persistent_workers=False,
+    num_workers=12,
+    persistent_workers=True,
 )
 dataloader_test = DataLoader(dataset_test, batch_size=config["BATCH_SIZE"])
 
@@ -207,10 +244,10 @@ checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_mae", mode="min
 
 # Train model
 trainer = L.Trainer(
-    limit_train_batches=100,
-    max_epochs=5,
+    max_epochs=500,
     logger=wandb_logger,
     callbacks=[checkpoint_callback],
+    log_every_n_steps=400,
 )
 trainer.fit(
     model=model, train_dataloaders=dataloader_train, val_dataloaders=dataloader_val
