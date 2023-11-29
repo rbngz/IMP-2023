@@ -46,9 +46,17 @@ samples_df = samples_df[~samples_df["no2"].isna()]
 # Random shuffle
 samples_df = samples_df.sample(frac=1)
 
-# Exclude samples for which no land cover ground truth is present ~200
-land_cover_files = [x[:-4] for x in os.listdir(os.path.join(DATA_DIR, "worldcover"))]
-samples_df = samples_df.loc[samples_df["AirQualityStation"].isin(land_cover_files)]
+# Exclude samples for which no valid land cover ground truth is present ~200
+valid_land_cover_stations = []
+land_cover_path = os.path.join(DATA_DIR, "worldcover")
+for file in os.listdir(land_cover_path):
+    lc = np.load(os.path.join(land_cover_path, file))
+    if lc.shape == (200, 200):
+        valid_land_cover_stations.append(file[:-4])
+
+samples_df = samples_df.loc[
+    samples_df["AirQualityStation"].isin(valid_land_cover_stations)
+]
 
 
 # Split samples dataframe to avoid sampling patches across sets
