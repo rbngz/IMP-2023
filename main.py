@@ -191,7 +191,8 @@ class Model(L.LightningModule):
         total_loss = no2_loss + lc_loss
         self.log("train_no2_loss", no2_loss)
         self.log("train_no2_mae", no2_mae)
-        self.log("total_loss", total_loss)
+        self.log("train_lc_loss", lc_loss)
+        self.log("train_total_loss", total_loss)
         return total_loss
 
     def validation_step(self, batch, batch_idx):
@@ -199,7 +200,8 @@ class Model(L.LightningModule):
         total_loss = no2_loss + lc_loss
         self.log("val_no2_loss", no2_loss)
         self.log("val_no2_mae", no2_mae)
-        self.log("total_loss", total_loss)
+        self.log("val_lc_loss", lc_loss)
+        self.log("val_total_loss", total_loss)
         return total_loss
 
     def test_step(self, batch, batch_idx):
@@ -207,7 +209,8 @@ class Model(L.LightningModule):
         total_loss = no2_loss + lc_loss
         self.log("test_no2_loss", no2_loss)
         self.log("test_no2_mae", no2_mae)
-        self.log("total_loss", total_loss)
+        self.log("test_lc_loss", lc_loss)
+        self.log("test_total_loss", total_loss)
         return total_loss
 
     def _step(self, batch, log_predictions=False):
@@ -270,7 +273,7 @@ wandb_logger = WandbLogger(
 )
 
 # Configure which model to save
-checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_mae", mode="min")
+checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_no2_mae", mode="min")
 
 # Train model
 trainer = L.Trainer(
