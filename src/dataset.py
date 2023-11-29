@@ -1,6 +1,7 @@
 import os
 import random
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
 
@@ -15,8 +16,8 @@ class SentinelDataset(Dataset):
         n_patches=4,
         patch_size=128,
         pre_load=False,
-        transform=None,
-        target_transform=None,
+        s2_transform=None,
+        no2_transform=None,
     ) -> None:
         """Dataset that contains n patches per satellite image"""
         super().__init__()
@@ -27,6 +28,7 @@ class SentinelDataset(Dataset):
         # Extract relevant information from file
         self.measurements = df_samples["no2"].astype(np.float32)
         self.img_paths = df_samples["img_path"]
+        self.stations = df_samples["AirQualityStation"]
 
         # Determine minimum and maximum possible offsets
         self.offset_min = max(0, self.MEASUREMENT_LOC_XY - patch_size + 1)
@@ -37,8 +39,8 @@ class SentinelDataset(Dataset):
         self.n_patches = n_patches
         self.patch_size = patch_size
         self.pre_load = pre_load
-        self.transform = transform
-        self.target_transform = target_transform
+        self.s2_transform = s2_transform
+        self.no2_transform = no2_transform
 
         # Pre-load images
         images = []
@@ -60,6 +62,12 @@ class SentinelDataset(Dataset):
         else:
             img = self.get_full_image(data_idx)
 
+        # Load land cover ground truth
+        station = self.stations.iloc[data_idx]
+        land_cover_path = os.path.join(self.data_dir, "worldcover", station + ".npy")
+        land_cover = np.load(land_cover_path).astype(np.int64)
+        land_cover = land_cover // 10
+
         # Retrieve NO2 measurement for this sample
         no2 = self.measurements.iloc[data_idx]
 
@@ -72,18 +80,26 @@ class SentinelDataset(Dataset):
             offset_width : offset_width + self.patch_size,
         ]
 
+        # Crop land cover ground truth
+        land_cover = land_cover[
+            offset_height : offset_height + self.patch_size,
+            offset_width : offset_width + self.patch_size,
+        ]
+
         # Get new coordinates of measurement
         coord_height = self.MEASUREMENT_LOC_XY - offset_height
         coord_width = self.MEASUREMENT_LOC_XY - offset_width
         coords = (coord_height, coord_width)
 
         # Apply transformation
-        if self.transform:
-            patch = self.transform(patch)
-        if self.target_transform:
-            no2 = self.target_transform(no2)
+        if self.s2_transform:
+            patch = self.s2_transform(patch)
+        if self.no2_transform:
+            no2 = self.no2_transform(no2)
 
-        return patch, no2, coords
+        land_cover = torch.from_numpy(land_cover)
+
+        return patch, land_cover, no2, coords
 
     def _get_offsets(self):
         # Get random cropping offset

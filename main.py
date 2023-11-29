@@ -1,10 +1,11 @@
+import os
 import torch
 import numpy as np
 import pandas as pd
 import lightning as L
-from torchvision.transforms.v2 import ToImage, Compose
+from torchvision.transforms.v2 import ToImage, Compose, CenterCrop
 from torch.utils.data import DataLoader
-from torch.nn import MSELoss, L1Loss
+from torch.nn import MSELoss, L1Loss, CrossEntropyLoss
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
@@ -16,7 +17,7 @@ from src.model import UNet
 
 # Random seed for splitting
 SEED = 42
-L.seed_everything(42)
+L.seed_everything(42, workers=True)
 
 # File paths
 SAMPLES_PATH = (
@@ -44,6 +45,11 @@ samples_df = samples_df[~samples_df["no2"].isna()]
 
 # Random shuffle
 samples_df = samples_df.sample(frac=1)
+
+# Exclude samples for which no land cover ground truth is present ~200
+land_cover_files = [x[:-4] for x in os.listdir(os.path.join(DATA_DIR, "worldcover"))]
+samples_df = samples_df.loc[samples_df["AirQualityStation"].isin(land_cover_files)]
+
 
 # Split samples dataframe to avoid sampling patches across sets
 df_train, df_val, df_test = np.split(
@@ -99,8 +105,8 @@ band_normalize = BandNormalize(stats_train["band_means"], stats_train["band_stds
 no2_normalize = TargetNormalize(stats_train["no2_mean"], stats_train["no2_std"])
 
 # Create transforms for images and measurements
-transform = Compose([ToImage(), band_normalize])
-target_transform = no2_normalize
+s2_transform = Compose([ToImage(), band_normalize])
+no2_transform = no2_normalize
 
 # Create Train Dataset
 dataset_train = SentinelDataset(
@@ -109,8 +115,8 @@ dataset_train = SentinelDataset(
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
     pre_load=False,
-    transform=transform,
-    target_transform=target_transform,
+    s2_transform=s2_transform,
+    no2_transform=no2_transform,
 )
 
 # Create Validation Dataset
@@ -120,8 +126,8 @@ dataset_val = SentinelDataset(
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
     pre_load=False,
-    transform=transform,
-    target_transform=target_transform,
+    s2_transform=s2_transform,
+    no2_transform=no2_transform,
 )
 
 # Create Test Dataset
@@ -130,8 +136,8 @@ dataset_test = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
-    transform=transform,
-    target_transform=target_transform,
+    s2_transform=s2_transform,
+    no2_transform=no2_transform,
 )
 
 print(
@@ -156,6 +162,7 @@ dataloader_val = DataLoader(
 dataloader_test = DataLoader(dataset_test, batch_size=config["BATCH_SIZE"])
 
 
+# Define Pytorch lightning model
 class Model(L.LightningModule):
     def __init__(self, model, lr):
         super().__init__()
@@ -164,36 +171,43 @@ class Model(L.LightningModule):
         self.model = model
 
         # Set hyperparameters
-        self.loss = MSELoss()
-        self.mae = L1Loss()
+        self.no2_loss = MSELoss()
+        self.no2_mae = L1Loss()
+        self.lc_loss = CrossEntropyLoss()
         self.lr = lr
 
         self.save_hyperparameters(ignore=["model"])
 
     def training_step(self, batch, batch_idx):
-        loss, mae = self._step(batch)
-        self.log("train_loss", loss)
-        self.log("train_mae", mae)
-        return loss
+        no2_loss, no2_mae, lc_loss = self._step(batch)
+        total_loss = no2_loss + lc_loss
+        self.log("train_no2_loss", no2_loss)
+        self.log("train_no2_mae", no2_mae)
+        self.log("total_loss", total_loss)
+        return total_loss
 
     def validation_step(self, batch, batch_idx):
-        loss, mae = self._step(batch, batch_idx == 0)
-        self.log("val_loss", loss)
-        self.log("val_mae", mae)
-        return loss
+        no2_loss, no2_mae, lc_loss = self._step(batch, batch_idx == 0)
+        total_loss = no2_loss + lc_loss
+        self.log("val_no2_loss", no2_loss)
+        self.log("val_no2_mae", no2_mae)
+        self.log("total_loss", total_loss)
+        return total_loss
 
     def test_step(self, batch, batch_idx):
-        loss, mae = self._step(batch)
-        self.log("test_loss", loss)
-        self.log("test_mae", mae)
-        return loss
+        no2_loss, no2_mae, lc_loss = self._step(batch)
+        total_loss = no2_loss + lc_loss
+        self.log("test_no2_loss", no2_loss)
+        self.log("test_no2_mae", no2_mae)
+        self.log("total_loss", total_loss)
+        return total_loss
 
     def _step(self, batch, log_predictions=False):
         # Unpack batch
-        patches_norm, measurements_norm, coords = batch
+        patches_norm, lc_truth, measurements_norm, coords = batch
 
         # Get normalized predictions
-        predictions_norm = self.model(patches_norm)
+        predictions_norm, land_cover_pred = self.model(patches_norm)
 
         # Get input and output dimensions
         _, _, input_height, input_width = patches_norm.shape
@@ -211,19 +225,23 @@ class Model(L.LightningModule):
         target_values_norm = torch.diag(predictions_norm[:, 0, coords[0], coords[1]])
 
         # Compute loss on normalized data
-        loss = self.loss(target_values_norm, measurements_norm)
+        no2_loss = self.no2_loss(target_values_norm, measurements_norm)
+
+        # Center crop
+        lc_truth = CenterCrop(land_cover_pred.shape[-2:])(lc_truth)
+        lc_loss = self.lc_loss(land_cover_pred, lc_truth)
 
         # Compute Mean Absolute Error on unnormalized data
         measurements = no2_normalize.revert(measurements_norm)
         target_values = no2_normalize.revert(target_values_norm)
-        mae = self.mae(target_values, measurements)
+        no2_mae = self.no2_mae(target_values, measurements)
 
         if log_predictions:
             self.logger.log_image(
                 "predictions", list(no2_normalize.revert(predictions_norm))
             )
 
-        return loss, mae
+        return no2_loss, no2_mae, lc_loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
@@ -231,7 +249,11 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-unet = UNet(enc_chs=config["ENCODER_CHANNELS"], dec_chs=config["DECODER_CHANNELS"])
+unet = UNet(
+    enc_chs=config["ENCODER_CHANNELS"],
+    dec_chs=config["DECODER_CHANNELS"],
+    land_cover_n_class=11,
+)
 model = Model(model=unet, lr=config["LEARNING_RATE"])
 
 # Get logger for weights & biases
