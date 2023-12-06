@@ -13,7 +13,7 @@ from torchsummary import summary
 
 
 from core.dataset import SentinelDataset
-from core.model import FCN, UNet, FCNResNet
+from core.model import FCN, UNet, FCNResNet, ImageSegmentation
 from src.utils import get_dataset_stats, normalize_rgb_bands
 from src.transforms import BandNormalize, TargetNormalize
 
@@ -281,7 +281,7 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-fcn = FCN(config["ENCODER_CONFIG"], True)
+fcn = ImageSegmentation(3)
 summary(fcn.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
     model=fcn,
