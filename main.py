@@ -246,7 +246,7 @@ class Model(L.LightningModule):
             self.logger.log_image(
                 "images",
                 [
-                    torch.moveaxis(normalize_rgb_bands(im), 0, 2)
+                    np.moveaxis(normalize_rgb_bands(im.numpy()), 0, 2)
                     for im in patches_norm[:, :3]
                 ],
             )
