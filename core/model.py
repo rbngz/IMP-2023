@@ -41,10 +41,10 @@ class FCN(nn.Module):
         self.encoder = VGGEncoder(encoder_config, encoder_batch_norm)
 
         self.no2_head = nn.Conv2d(512, 1, kernel_size=1)
-        self.land_cover_head = nn.Conv2d(512, 11, 1)
+        # self.land_cover_head = nn.Conv2d(512, 11, 1)
 
     def forward(self, x):
         x = self.encoder(x)
         no2_output = self.no2_head(x)
-        land_cover_output = self.land_cover_head(x)
-        return no2_output, land_cover_output
+        # land_cover_output = self.land_cover_head(x)
+        return no2_output
