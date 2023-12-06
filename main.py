@@ -177,16 +177,11 @@ dataloader_test = DataLoader(dataset_test, batch_size=config["BATCH_SIZE"])
 
 # Define Pytorch lightning model
 class Model(L.LightningModule):
-    def __init__(
-        self, model, patch_size, lr, lc_loss_weight, band_normalize, no2_normalize
-    ):
+    def __init__(self, model, patch_size, lr, lc_loss_weight):
         super().__init__()
 
         # Set model
         self.model = model
-
-        self.band_normalize = band_normalize
-        self.no2_normalize = no2_normalize
 
         # Set hyperparameters
         self.patch_size = patch_size
@@ -243,8 +238,8 @@ class Model(L.LightningModule):
         lc_loss = self.lc_loss(land_cover_pred, lc_truth)
 
         # Compute Mean Absolute Error on unnormalized data
-        measurements = self.no2_normalize.revert(measurements_norm)
-        target_values = self.no2_normalize.revert(target_values_norm)
+        measurements = no2_normalize.revert(measurements_norm)
+        target_values = no2_normalize.revert(target_values_norm)
         no2_mae = self.no2_mae(target_values, measurements)
 
         if log_predictions:
@@ -252,11 +247,11 @@ class Model(L.LightningModule):
                 "images",
                 [
                     torch.moveaxis(normalize_rgb_bands(im), 0, 2)
-                    for im in self.band_normalize.revert(patches_norm)[:, :3]
+                    for im in patches_norm[:, :3]
                 ],
             )
             self.logger.log_image(
-                "predictions", list(self.no2_normalize.revert(predictions_norm))
+                "predictions", list(no2_normalize.revert(predictions_norm))
             )
 
         return no2_loss, no2_mae, lc_loss
@@ -274,8 +269,6 @@ model = Model(
     lr=config["LEARNING_RATE"],
     patch_size=config["PATCH_SIZE"],
     lc_loss_weight=config["LC_LOSS_WEIGHT"],
-    band_normalize=band_normalize,
-    no2_normalize=no2_normalize,
 )
 
 # Get logger for weights & biases
