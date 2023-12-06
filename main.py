@@ -38,7 +38,7 @@ config = {
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
     "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
-    "DECODER_CONFID": (1024, 512, 256, 128, 64),
+    "DECODER_CONFIG": (1024, 512, 256, 128, 64),
 }
 
 # Read the samples file
