@@ -266,9 +266,9 @@ class Model(L.LightningModule):
 
 # Instantiate Model
 fcn = FCN(config["ENCODER_CONFIG"], config["ENCODER_BATCH_NORM"])
-summary(fcn, (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
+summary(fcn.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
-    model=fcn.cuda(),
+    model=fcn,
     lr=config["LEARNING_RATE"],
     patch_size=config["PATCH_SIZE"],
     pred_size=config["PRED_SIZE"],
