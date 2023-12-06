@@ -12,9 +12,9 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from torchsummary import summary
 
 
-from core.dataset import SentinelDataset
+from src.dataset import SentinelDataset
 from core.model import FCN, UNet
-from src.utils import get_dataset_stats
+from src.utils import get_dataset_stats, normalize_rgb_bands
 from src.transforms import BandNormalize, TargetNormalize
 
 
@@ -34,7 +34,6 @@ LOG_DIR = "/netscratch2/rubengaviles/imp-2023/logs"
 config = {
     "N_PATCHES": 4,
     "PATCH_SIZE": 128,
-    "PRED_SIZE": 8,
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
     "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
@@ -127,7 +126,6 @@ dataset_train = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
-    pred_size=config["PRED_SIZE"],
     pre_load=False,
     s2_transform=s2_transform,
     no2_transform=no2_transform,
@@ -139,7 +137,6 @@ dataset_val = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
-    pred_size=config["PRED_SIZE"],
     pre_load=False,
     s2_transform=s2_transform,
     no2_transform=no2_transform,
@@ -151,7 +148,6 @@ dataset_test = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
-    pred_size=config["PRED_SIZE"],
     pre_load=False,
     s2_transform=s2_transform,
     no2_transform=no2_transform,
@@ -186,9 +182,6 @@ class Model(L.LightningModule):
 
         # Set model
         self.model = model
-
-        # Compute coordinate offset
-        self.offset = (patch_size - pred_size) // 2
 
         # Set hyperparameters
         self.patch_size = patch_size
@@ -235,10 +228,6 @@ class Model(L.LightningModule):
         # Get normalized predictions
         predictions_norm, land_cover_pred = self.model(patches_norm)
 
-        # Apply offset to coords
-        coords[0] -= self.offset
-        coords[1] -= self.offset
-
         # Extract values in coordinate location
         target_values_norm = torch.diag(predictions_norm[:, 0, coords[0], coords[1]])
 
@@ -255,6 +244,13 @@ class Model(L.LightningModule):
         no2_mae = self.no2_mae(target_values, measurements)
 
         if log_predictions:
+            self.logger.log_image(
+                "images",
+                [
+                    torch.moveaxis(normalize_rgb_bands(im), 0, 2)
+                    for im in band_normalize.revert(patches_norm)[:, :3]
+                ],
+            )
             self.logger.log_image(
                 "predictions", list(no2_normalize.revert(predictions_norm))
             )

@@ -120,7 +120,7 @@ class UNet(nn.Module):
         super().__init__()
         self.encoder = Encoder(enc_chs)
         self.decoder = Decoder(dec_chs)
-        self.no2_head = nn.Conv2d(enc_chs[-1], 1, 1)
+        self.no2_head = nn.Conv2d(dec_chs[-1], 1, 1)
         self.land_cover_head = nn.Conv2d(dec_chs[-1], 11, 1)
 
     def get_output_dim(self, input_dim: int):
@@ -136,10 +136,9 @@ class UNet(nn.Module):
 
     def forward(self, x):
         encoder_outputs = self.encoder.forward(x)
-
-        no2_output = self.no2_head(encoder_outputs[-1])
-        land_cover_output = self.decoder.forward(
+        decoder_output = self.decoder.forward(
             encoder_outputs[-1], encoder_outputs[::-1][1:]
         )
-        land_cover_output = self.land_cover_head(land_cover_output)
+        no2_output = self.no2_head(decoder_output)
+        land_cover_output = self.land_cover_head(decoder_output)
         return no2_output, land_cover_output
