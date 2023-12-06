@@ -13,7 +13,7 @@ from torchsummary import summary
 
 
 from src.dataset import SentinelDataset
-from core.model import FCN, UNet
+from core.model import FCN, UNet, FCNResNet
 from src.utils import get_dataset_stats, normalize_rgb_bands
 from src.transforms import BandNormalize, TargetNormalize
 
@@ -36,27 +36,8 @@ config = {
     "PATCH_SIZE": 128,
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
-    "ENCODER_CONFIG": [
-        64,
-        64,
-        "M",
-        128,
-        128,
-        "M",
-        256,
-        256,
-        256,
-        "M",
-        512,
-        512,
-        512,
-        "M",
-        512,
-        512,
-        512,
-        "M",
-    ],
-    "DECODER_CONFIG": (1024, 512, 256, 128, 64),
+    "ENCODER_CONFIG": None,
+    "DECODER_CONFIG": None,
     "LC_LOSS_WEIGHT": 0.1,
 }
 
@@ -281,7 +262,7 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-fcn = FCN(config["ENCODER_CONFIG"], True)
+fcn = FCNResNet()
 summary(fcn.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
     model=fcn,
