@@ -34,11 +34,11 @@ LOG_DIR = "/netscratch2/rubengaviles/imp-2023/logs"
 config = {
     "N_PATCHES": 4,
     "PATCH_SIZE": 128,
-    "PRED_SIZE": 4,
+    "PRED_SIZE": 8,
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
     "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
-    "DECODER_CONFIG": (1024,),
+    "DECODER_CONFID": (1024, 512, 256, 128, 64),
 }
 
 # Read the samples file
@@ -194,39 +194,36 @@ class Model(L.LightningModule):
         self.pred_size = pred_size
         self.no2_loss = MSELoss()
         self.no2_mae = L1Loss()
-        # self.lc_loss = CrossEntropyLoss()
+        self.lc_loss = CrossEntropyLoss()
         self.lr = lr
 
         self.save_hyperparameters(ignore=["model"])
 
     def training_step(self, batch, batch_idx):
-        # no2_loss, no2_mae, lc_loss = self._step(batch)
-        # total_loss = no2_loss + lc_loss
-        no2_loss, no2_mae = self._step(batch)
+        no2_loss, no2_mae, lc_loss = self._step(batch)
+        total_loss = no2_loss + lc_loss
         self.log("train_no2_loss", no2_loss)
         self.log("train_no2_mae", no2_mae)
-        # self.log("train_lc_loss", lc_loss)
-        # self.log("train_total_loss", total_loss)
+        self.log("train_lc_loss", lc_loss)
+        self.log("train_total_loss", total_loss)
         return no2_loss
 
     def validation_step(self, batch, batch_idx):
-        # no2_loss, no2_mae, lc_loss = self._step(batch, batch_idx == 0)
-        # total_loss = no2_loss + lc_loss
-        no2_loss, no2_mae = self._step(batch)
+        no2_loss, no2_mae, lc_loss = self._step(batch, batch_idx == 0)
+        total_loss = no2_loss + lc_loss
         self.log("val_no2_loss", no2_loss)
         self.log("val_no2_mae", no2_mae)
-        # self.log("val_lc_loss", lc_loss)
-        # self.log("val_total_loss", total_loss)
+        self.log("val_lc_loss", lc_loss)
+        self.log("val_total_loss", total_loss)
         return no2_loss
 
     def test_step(self, batch, batch_idx):
-        # no2_loss, no2_mae, lc_loss = self._step(batch)
-        # total_loss = no2_loss + lc_loss
-        no2_loss, no2_mae = self._step(batch)
+        no2_loss, no2_mae, lc_loss = self._step(batch)
+        total_loss = no2_loss + lc_loss
         self.log("test_no2_loss", no2_loss)
         self.log("test_no2_mae", no2_mae)
-        # self.log("test_lc_loss", lc_loss)
-        # self.log("test_total_loss", total_loss)
+        self.log("test_lc_loss", lc_loss)
+        self.log("test_total_loss", total_loss)
         return no2_loss
 
     def _step(self, batch, log_predictions=False):
@@ -234,7 +231,7 @@ class Model(L.LightningModule):
         patches_norm, lc_truth, measurements_norm, coords = batch
 
         # Get normalized predictions
-        # predictions_norm, land_cover_pred = self.model(patches_norm)
+        predictions_norm, land_cover_pred = self.model(patches_norm)
         predictions_norm = self.model(patches_norm)
 
         # Apply offset to coords
@@ -249,7 +246,7 @@ class Model(L.LightningModule):
 
         # Center crop
         # lc_truth = CenterCrop(land_cover_pred.shape[-2:])(lc_truth)
-        # lc_loss = self.lc_loss(land_cover_pred, lc_truth)
+        lc_loss = self.lc_loss(land_cover_pred, lc_truth)
 
         # Compute Mean Absolute Error on unnormalized data
         measurements = no2_normalize.revert(measurements_norm)
@@ -261,8 +258,7 @@ class Model(L.LightningModule):
                 "predictions", list(no2_normalize.revert(predictions_norm))
             )
 
-        # return no2_loss, no2_mae, lc_loss
-        return no2_loss, no2_mae
+        return no2_loss, no2_mae, lc_loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)

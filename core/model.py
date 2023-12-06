@@ -116,16 +116,12 @@ class UNet(nn.Module):
         self,
         enc_chs=(12, 64, 128, 256, 512, 1024),
         dec_chs=(1024, 512, 256, 128, 64),
-        # land_cover_n_class=1,
     ):
         super().__init__()
         self.encoder = Encoder(enc_chs)
         self.decoder = Decoder(dec_chs)
-        self.no2_decoder = nn.Sequential(
-            nn.MaxPool2d(2), Block(dec_chs[-1], dec_chs[-1])
-        )
-        self.no2_head = nn.Conv2d(dec_chs[-1], 1, 1)
-        # self.land_cover_head = nn.Conv2d(dec_chs[-1], land_cover_n_class, 1)
+        self.no2_head = nn.Conv2d(enc_chs[-1], 1, 1)
+        self.land_cover_head = nn.Conv2d(dec_chs[-1], 11, 1)
 
     def get_output_dim(self, input_dim: int):
         output_dim = input_dim
@@ -140,9 +136,10 @@ class UNet(nn.Module):
 
     def forward(self, x):
         encoder_outputs = self.encoder.forward(x)
-        output = self.decoder.forward(encoder_outputs[-1], encoder_outputs[::-1][1:])
-        no2_output = self.no2_decoder(encoder_outputs[-1])
-        no2_output = self.no2_head(no2_output)
-        # land_cover_output = self.land_cover_head(output)
-        # return no2_output, land_cover_output
-        return no2_output
+
+        no2_output = self.no2_head(encoder_outputs[-1])
+        land_cover_output = self.decoder.forward(
+            encoder_outputs[-1], encoder_outputs[::-1][1:]
+        )
+        land_cover_output = self.land_cover_head(land_cover_output)
+        return no2_output, land_cover_output
