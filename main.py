@@ -206,7 +206,7 @@ class Model(L.LightningModule):
         self.log("train_no2_mae", no2_mae)
         self.log("train_lc_loss", lc_loss)
         self.log("train_total_loss", total_loss)
-        return no2_loss
+        return total_loss
 
     def validation_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch, batch_idx == 0)
@@ -215,7 +215,7 @@ class Model(L.LightningModule):
         self.log("val_no2_mae", no2_mae)
         self.log("val_lc_loss", lc_loss)
         self.log("val_total_loss", total_loss)
-        return no2_loss
+        return total_loss
 
     def test_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch)
@@ -224,7 +224,7 @@ class Model(L.LightningModule):
         self.log("test_no2_mae", no2_mae)
         self.log("test_lc_loss", lc_loss)
         self.log("test_total_loss", total_loss)
-        return no2_loss
+        return total_loss
 
     def _step(self, batch, log_predictions=False):
         # Unpack batch
