@@ -34,7 +34,7 @@ LOG_DIR = "/netscratch2/rubengaviles/imp-2023/logs"
 config = {
     "N_PATCHES": 4,
     "PATCH_SIZE": 128,
-    "PRED_SIZE": 8,
+    "PRED_SIZE": 4,
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
     "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),

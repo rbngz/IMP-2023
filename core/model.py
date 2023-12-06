@@ -121,6 +121,7 @@ class UNet(nn.Module):
         super().__init__()
         self.encoder = Encoder(enc_chs)
         self.decoder = Decoder(dec_chs)
+        self.no2_decoder = nn.Sequential(nn.MaxPool2d(2))
         self.no2_head = nn.Conv2d(dec_chs[-1], 1, 1)
         # self.land_cover_head = nn.Conv2d(dec_chs[-1], land_cover_n_class, 1)
 
@@ -137,10 +138,9 @@ class UNet(nn.Module):
 
     def forward(self, x):
         encoder_outputs = self.encoder.forward(x)
-        output = self.decoder.forward(
-            encoder_outputs[::-1][0], encoder_outputs[::-1][1:]
-        )
-        no2_output = self.no2_head(output)
+        output = self.decoder.forward(encoder_outputs[-1], encoder_outputs[::-1][1:])
+        no2_output = self.no2_decoder(encoder_outputs[-1])
+        no2_output = self.no2_head(no2_output)
         # land_cover_output = self.land_cover_head(output)
         # return no2_output, land_cover_output
         return no2_output
