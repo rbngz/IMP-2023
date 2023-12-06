@@ -9,10 +9,13 @@ from torch.nn import MSELoss, L1Loss, CrossEntropyLoss
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
-from src.dataset import SentinelDataset
+from torchsummary import summary
+
+
+from core.dataset import SentinelDataset
+from core.model import FCN
 from src.utils import get_dataset_stats
 from src.transforms import BandNormalize, TargetNormalize
-from src.model import UNet
 
 
 # Random seed for splitting
@@ -31,10 +34,11 @@ LOG_DIR = "/netscratch2/rubengaviles/imp-2023/logs"
 config = {
     "N_PATCHES": 4,
     "PATCH_SIZE": 128,
+    "PRED_SIZE": 8,
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
-    "ENCODER_CHANNELS": (12, 64, 128, 256),
-    "DECODER_CHANNELS": (256, 128, 64),
+    "ENCODER_CONFIG": [64, 64, "M", 128, 128, "M", 256, 256, "M", 512, 512, "M"],
+    "ENCODER_BATCH_NORM": False,
 }
 
 # Read the samples file
@@ -122,6 +126,7 @@ dataset_train = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
+    pred_size=config["PRED_SIZE"],
     pre_load=False,
     s2_transform=s2_transform,
     no2_transform=no2_transform,
@@ -133,6 +138,7 @@ dataset_val = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
+    pred_size=config["PRED_SIZE"],
     pre_load=False,
     s2_transform=s2_transform,
     no2_transform=no2_transform,
@@ -144,6 +150,8 @@ dataset_test = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
+    pred_size=config["PRED_SIZE"],
+    pre_load=False,
     s2_transform=s2_transform,
     no2_transform=no2_transform,
 )
@@ -172,19 +180,24 @@ dataloader_test = DataLoader(dataset_test, batch_size=config["BATCH_SIZE"])
 
 # Define Pytorch lightning model
 class Model(L.LightningModule):
-    def __init__(self, model, lr):
+    def __init__(self, model, patch_size, pred_size, lr):
         super().__init__()
 
         # Set model
         self.model = model
 
+        # Compute coordinate offset
+        self.offset = (patch_size - pred_size) // 2
+
         # Set hyperparameters
+        self.patch_size = patch_size
+        self.pred_size = pred_size
         self.no2_loss = MSELoss()
         self.no2_mae = L1Loss()
         self.lc_loss = CrossEntropyLoss()
         self.lr = lr
 
-        self.save_hyperparameters(ignore=["model"])
+        self.save_hyperparameters()
 
     def training_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch)
@@ -220,17 +233,9 @@ class Model(L.LightningModule):
         # Get normalized predictions
         predictions_norm, land_cover_pred = self.model(patches_norm)
 
-        # Get input and output dimensions
-        _, _, input_height, input_width = patches_norm.shape
-        _, _, output_height, output_width = predictions_norm.shape
-
-        # Compute prediction offset
-        offset_height = (input_height - output_height) // 2
-        offset_width = (input_width - output_width) // 2
-
         # Apply offset to coords
-        coords[0] -= offset_height
-        coords[1] -= offset_width
+        coords[0] -= self.offset
+        coords[1] -= self.offset_width
 
         # Extract values in coordinate location
         target_values_norm = torch.diag(predictions_norm[:, 0, coords[0], coords[1]])
@@ -260,12 +265,14 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-unet = UNet(
-    enc_chs=config["ENCODER_CHANNELS"],
-    dec_chs=config["DECODER_CHANNELS"],
-    land_cover_n_class=11,
+fcn = FCN(config["ENCODER_CONFIG"], config["ENCODER_BATCH_NORM"])
+summary(fcn, (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
+model = Model(
+    model=fcn,
+    lr=config["LEARNING_RATE"],
+    patch_size=config["PATCH_SIZE"],
+    pred_size=config["PRED_SIZE"],
 )
-model = Model(model=unet, lr=config["LEARNING_RATE"])
 
 # Get logger for weights & biases
 wandb_logger = WandbLogger(
