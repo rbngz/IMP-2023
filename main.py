@@ -39,6 +39,7 @@ config = {
     "LEARNING_RATE": 1e-4,
     "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
     "DECODER_CONFIG": (1024, 512, 256, 128, 64),
+    "LC_LOSS_WEIGHT": 0.1,
 }
 
 # Read the samples file
@@ -180,7 +181,7 @@ dataloader_test = DataLoader(dataset_test, batch_size=config["BATCH_SIZE"])
 
 # Define Pytorch lightning model
 class Model(L.LightningModule):
-    def __init__(self, model, patch_size, pred_size, lr):
+    def __init__(self, model, patch_size, pred_size, lr, lc_loss_weight):
         super().__init__()
 
         # Set model
@@ -195,13 +196,14 @@ class Model(L.LightningModule):
         self.no2_loss = MSELoss()
         self.no2_mae = L1Loss()
         self.lc_loss = CrossEntropyLoss()
+        self.lc_loss_weight = lc_loss_weight
         self.lr = lr
 
         self.save_hyperparameters(ignore=["model"])
 
     def training_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch)
-        total_loss = no2_loss + lc_loss
+        total_loss = no2_loss + (self.lc_loss_weight * lc_loss)
         self.log("train_no2_loss", no2_loss)
         self.log("train_no2_mae", no2_mae)
         self.log("train_lc_loss", lc_loss)
@@ -210,7 +212,7 @@ class Model(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch, batch_idx == 0)
-        total_loss = no2_loss + lc_loss
+        total_loss = no2_loss + (self.lc_loss_weight * lc_loss)
         self.log("val_no2_loss", no2_loss)
         self.log("val_no2_mae", no2_mae)
         self.log("val_lc_loss", lc_loss)
@@ -219,7 +221,7 @@ class Model(L.LightningModule):
 
     def test_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch)
-        total_loss = no2_loss + lc_loss
+        total_loss = no2_loss + (self.lc_loss_weight * lc_loss)
         self.log("test_no2_loss", no2_loss)
         self.log("test_no2_mae", no2_mae)
         self.log("test_lc_loss", lc_loss)
@@ -272,6 +274,7 @@ model = Model(
     lr=config["LEARNING_RATE"],
     patch_size=config["PATCH_SIZE"],
     pred_size=config["PRED_SIZE"],
+    lc_loss_weight=config["LC_LOSS_WEIGHT"],
 )
 
 # Get logger for weights & biases
