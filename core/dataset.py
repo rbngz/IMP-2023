@@ -15,7 +15,7 @@ class SentinelDataset(Dataset):
         data_dir,
         n_patches=4,
         patch_size=128,
-        pred_size=2,
+        pred_size=8,
         pre_load=False,
         s2_transform=None,
         no2_transform=None,

@@ -12,7 +12,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from torchsummary import summary
 
 
-from src.dataset import SentinelDataset
+from core.dataset import SentinelDataset
 from core.model import FCN, UNet, FCNResNet
 from src.utils import get_dataset_stats, normalize_rgb_bands
 from src.transforms import BandNormalize, TargetNormalize
@@ -262,7 +262,7 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-fcn = FCNResNet()
+fcn = FCN(config["ENCODER_CONFIG"], True)
 summary(fcn.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
     model=fcn,
