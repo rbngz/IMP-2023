@@ -232,7 +232,6 @@ class Model(L.LightningModule):
 
         # Get normalized predictions
         predictions_norm, land_cover_pred = self.model(patches_norm)
-        predictions_norm = self.model(patches_norm)
 
         # Apply offset to coords
         coords[0] -= self.offset
