@@ -177,7 +177,7 @@ dataloader_test = DataLoader(dataset_test, batch_size=config["BATCH_SIZE"])
 
 # Define Pytorch lightning model
 class Model(L.LightningModule):
-    def __init__(self, model, patch_size, pred_size, lr, lc_loss_weight):
+    def __init__(self, model, patch_size, lr, lc_loss_weight):
         super().__init__()
 
         # Set model
@@ -185,7 +185,6 @@ class Model(L.LightningModule):
 
         # Set hyperparameters
         self.patch_size = patch_size
-        self.pred_size = pred_size
         self.no2_loss = MSELoss()
         self.no2_mae = L1Loss()
         self.lc_loss = CrossEntropyLoss()
@@ -269,7 +268,6 @@ model = Model(
     model=unet,
     lr=config["LEARNING_RATE"],
     patch_size=config["PATCH_SIZE"],
-    pred_size=config["PRED_SIZE"],
     lc_loss_weight=config["LC_LOSS_WEIGHT"],
 )
 
