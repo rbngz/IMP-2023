@@ -36,7 +36,26 @@ config = {
     "PATCH_SIZE": 128,
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
-    "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
+    "ENCODER_CONFIG": [
+        64,
+        64,
+        "M",
+        128,
+        128,
+        "M",
+        256,
+        256,
+        256,
+        "M",
+        512,
+        512,
+        512,
+        "M",
+        512,
+        512,
+        512,
+        "M",
+    ],
     "DECODER_CONFIG": (1024, 512, 256, 128, 64),
     "LC_LOSS_WEIGHT": 0.1,
 }
@@ -262,10 +281,10 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-unet = UNet(config["ENCODER_CONFIG"], config["DECODER_CONFIG"])
-summary(unet.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
+fcn = FCN(config["ENCODER_CONFIG"], True)
+summary(fcn.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
-    model=unet,
+    model=fcn,
     lr=config["LEARNING_RATE"],
     patch_size=config["PATCH_SIZE"],
     lc_loss_weight=config["LC_LOSS_WEIGHT"],
