@@ -13,7 +13,7 @@ from torchsummary import summary
 
 
 from core.dataset import SentinelDataset
-from core.model import FCN
+from core.model import FCN, UNet
 from src.utils import get_dataset_stats
 from src.transforms import BandNormalize, TargetNormalize
 
@@ -37,8 +37,8 @@ config = {
     "PRED_SIZE": 8,
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
-    "ENCODER_CONFIG": [64, 64, "M", 128, 128, "M", 256, 256, "M", 512, 512, "M"],
-    "ENCODER_BATCH_NORM": False,
+    "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
+    "DECODER_CONFIG": (1024,),
 }
 
 # Read the samples file
@@ -197,7 +197,7 @@ class Model(L.LightningModule):
         # self.lc_loss = CrossEntropyLoss()
         self.lr = lr
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["model"])
 
     def training_step(self, batch, batch_idx):
         # no2_loss, no2_mae, lc_loss = self._step(batch)
@@ -270,10 +270,10 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-fcn = FCN(config["ENCODER_CONFIG"], config["ENCODER_BATCH_NORM"])
-summary(fcn.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
+unet = UNet(config["ENCODER_CONFIG"], config["DECODER_CONFIG"])
+summary(unet.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
-    model=fcn,
+    model=unet,
     lr=config["LEARNING_RATE"],
     patch_size=config["PATCH_SIZE"],
     pred_size=config["PRED_SIZE"],
