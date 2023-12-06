@@ -235,7 +235,7 @@ class Model(L.LightningModule):
 
         # Apply offset to coords
         coords[0] -= self.offset
-        coords[1] -= self.offset_width
+        coords[1] -= self.offset
 
         # Extract values in coordinate location
         target_values_norm = torch.diag(predictions_norm[:, 0, coords[0], coords[1]])
@@ -268,7 +268,7 @@ class Model(L.LightningModule):
 fcn = FCN(config["ENCODER_CONFIG"], config["ENCODER_BATCH_NORM"])
 summary(fcn, (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
-    model=fcn,
+    model=fcn.cuda(),
     lr=config["LEARNING_RATE"],
     patch_size=config["PATCH_SIZE"],
     pred_size=config["PRED_SIZE"],
