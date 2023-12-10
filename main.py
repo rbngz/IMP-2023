@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import pandas as pd
 import lightning as L
-from torchvision.transforms.v2 import ToImage, Compose, CenterCrop
+from torchvision.transforms.v2 import ToImage, Compose
 from torch.utils.data import DataLoader
 from torch.nn import MSELoss, L1Loss, CrossEntropyLoss
 from lightning.pytorch.loggers import WandbLogger
@@ -13,7 +13,7 @@ from torchsummary import summary
 
 
 from core.dataset import SentinelDataset
-from core.model import FCN, UNet, FCNResNet, ImageSegmentation
+from core.model import UNet
 from src.utils import get_dataset_stats, normalize_rgb_bands
 from src.transforms import BandNormalize, TargetNormalize
 
@@ -36,28 +36,10 @@ config = {
     "PATCH_SIZE": 128,
     "BATCH_SIZE": 8,
     "LEARNING_RATE": 1e-4,
-    "ENCODER_CONFIG": [
-        64,
-        64,
-        "M",
-        128,
-        128,
-        "M",
-        256,
-        256,
-        256,
-        "M",
-        512,
-        512,
-        512,
-        "M",
-        512,
-        512,
-        512,
-        "M",
-    ],
-    "DECODER_CONFIG": None,
+    "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
+    "DECODER_CONFIG": (1024, 512, 256, 128, 64),
     "LC_LOSS_WEIGHT": 0.1,
+    "PRE_LOAD": True,
 }
 
 # Read the samples file
@@ -145,7 +127,7 @@ dataset_train = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
-    pre_load=False,
+    pre_load=config["PRE_LOAD"],
     s2_transform=s2_transform,
     no2_transform=no2_transform,
 )
@@ -156,7 +138,7 @@ dataset_val = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
-    pre_load=False,
+    pre_load=config["PRE_LOAD"],
     s2_transform=s2_transform,
     no2_transform=no2_transform,
 )
@@ -167,7 +149,7 @@ dataset_test = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
-    pre_load=False,
+    pre_load=config["PRE_LOAD"],
     s2_transform=s2_transform,
     no2_transform=no2_transform,
 )
@@ -196,14 +178,13 @@ dataloader_test = DataLoader(dataset_test, batch_size=config["BATCH_SIZE"])
 
 # Define Pytorch lightning model
 class Model(L.LightningModule):
-    def __init__(self, model, patch_size, lr, lc_loss_weight):
+    def __init__(self, model, lr, lc_loss_weight):
         super().__init__()
 
         # Set model
         self.model = model
 
         # Set hyperparameters
-        self.patch_size = patch_size
         self.no2_loss = MSELoss()
         self.no2_mae = L1Loss()
         self.lc_loss = CrossEntropyLoss()
@@ -281,12 +262,11 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-fcn = ImageSegmentation(3)
-summary(fcn.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
+unet = UNet(config["ENCODER_CONFIG"], config["DECODER_CONFIG"])
+summary(unet.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
-    model=fcn,
+    model=unet,
     lr=config["LEARNING_RATE"],
-    patch_size=config["PATCH_SIZE"],
     lc_loss_weight=config["LC_LOSS_WEIGHT"],
 )
 
