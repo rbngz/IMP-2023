@@ -1,5 +1,6 @@
 import os
 import torch
+import wandb
 import numpy as np
 import pandas as pd
 import lightning as L
@@ -46,6 +47,7 @@ config = {
     "SKIP_CONNECTIONS": False,
     "INCLUDE_LC": True,
 }
+wandb.init(config=config, dir=LOG_DIR, entity="imp-2023", project="IMP-2023")
 
 # Read the samples file
 samples_df = pd.read_csv(SAMPLES_PATH, index_col="idx")
@@ -125,10 +127,10 @@ no2_transform = no2_normalize
 dataset_train = SentinelDataset(
     df_train,
     DATA_DIR,
-    n_patches=config["N_PATCHES"],
-    patch_size=config["PATCH_SIZE"],
-    pred_size=config["PRED_SIZE"],
-    pre_load=config["PRE_LOAD"],
+    n_patches=wandb.config["N_PATCHES"],
+    patch_size=wandb.config["PATCH_SIZE"],
+    pred_size=wandb.config["PRED_SIZE"],
+    pre_load=wandb.config["PRE_LOAD"],
     s2_transform=s2_transform,
     no2_transform=no2_transform,
 )
@@ -137,10 +139,10 @@ dataset_train = SentinelDataset(
 dataset_val = SentinelDataset(
     df_val,
     DATA_DIR,
-    n_patches=config["N_PATCHES"],
-    patch_size=config["PATCH_SIZE"],
-    pred_size=config["PRED_SIZE"],
-    pre_load=config["PRE_LOAD"],
+    n_patches=wandb.config["N_PATCHES"],
+    patch_size=wandb.config["PATCH_SIZE"],
+    pred_size=wandb.config["PRED_SIZE"],
+    pre_load=wandb.config["PRE_LOAD"],
     s2_transform=s2_transform,
     no2_transform=no2_transform,
 )
@@ -149,14 +151,14 @@ print(f"Train dataset: {len(dataset_train)}, Validation dataset: {len(dataset_va
 # Create Dataloaders
 dataloader_train = DataLoader(
     dataset_train,
-    batch_size=config["BATCH_SIZE"],
+    batch_size=wandb.config["BATCH_SIZE"],
     shuffle=True,
     num_workers=12,
     persistent_workers=True,
 )
 dataloader_val = DataLoader(
     dataset_val,
-    batch_size=config["BATCH_SIZE"],
+    batch_size=wandb.config["BATCH_SIZE"],
     shuffle=False,
     num_workers=12,
     persistent_workers=True,
@@ -252,27 +254,27 @@ class Model(L.LightningModule):
 
 # Instantiate Model
 unet = UNet(
-    config["ENCODER_CONFIG"], config["DECODER_CONFIG"], config["SKIP_CONNECTIONS"]
+    wandb.config["ENCODER_CONFIG"],
+    wandb.config["DECODER_CONFIG"],
+    wandb.config["SKIP_CONNECTIONS"],
 )
-summary(unet.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
+summary(unet.cuda(), (12, wandb.config["PATCH_SIZE"], wandb.config["PATCH_SIZE"]))
 model = Model(
     model=unet,
-    lr=config["LEARNING_RATE"],
-    include_lc=config["INCLUDE_LC"],
-    lc_loss_weight=config["LC_LOSS_WEIGHT"],
+    lr=wandb.config["LEARNING_RATE"],
+    include_lc=wandb.config["INCLUDE_LC"],
+    lc_loss_weight=wandb.config["LC_LOSS_WEIGHT"],
 )
 
 # Get logger for weights & biases
-wandb_logger = WandbLogger(
-    save_dir=LOG_DIR, dir=LOG_DIR, entity="imp-2023", project="IMP-2023", config=config
-)
+wandb_logger = WandbLogger(save_dir=LOG_DIR)
 
 # Configure which model to save
 checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_no2_mae", mode="min")
 
 # Train model
 trainer = L.Trainer(
-    max_epochs=config["MAX_EPOCHS"],
+    max_epochs=wandb.config["MAX_EPOCHS"],
     logger=wandb_logger,
     callbacks=[checkpoint_callback],
 )
