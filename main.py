@@ -43,7 +43,7 @@ config = {
     "LC_LOSS_WEIGHT": 0.1,
     "PRE_LOAD": True,
     "MAX_EPOCHS": 20,
-    "SKIP_CONNECTIONS": True,
+    "SKIP_CONNECTIONS": False,
     "INCLUDE_LC": True,
 }
 
@@ -251,7 +251,9 @@ class Model(L.LightningModule):
 
 
 # Instantiate Model
-unet = UNet(config["ENCODER_CONFIG"], config["DECODER_CONFIG"])
+unet = UNet(
+    config["ENCODER_CONFIG"], config["DECODER_CONFIG"], config["SKIP_CONNECTIONS"]
+)
 summary(unet.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
     model=unet,
