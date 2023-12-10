@@ -45,8 +45,12 @@ class Decoder(nn.Module):
             # Check stride in original U-Net paper
             [nn.ConvTranspose2d(chs[i], chs[i + 1], 2, 2) for i in range(len(chs) - 1)]
         )
+        # Reduce decoder channels if no skip connections are used
+        if not skip_connections:
+            block_chs = tuple([ch // 2 for ch in chs])
+
         self.blocks = nn.ModuleList(
-            [Block(chs[i], chs[i + 1]) for i in range(len(chs) - 1)]
+            [Block(block_chs[i], block_chs[i + 1]) for i in range(len(block_chs) - 1)]
         )
 
     def forward(self, x, encoder_outputs):
@@ -68,10 +72,6 @@ class UNet(nn.Module):
     def __init__(self, enc_chs, dec_chs, skip_connections):
         super().__init__()
         self.encoder = Encoder(enc_chs)
-
-        # Reduce decoder channels if no skip connections are used
-        if not skip_connections:
-            dec_chs = tuple([ch // 2 for ch in dec_chs])
 
         self.decoder = Decoder(dec_chs, skip_connections)
         self.no2_head = nn.Conv2d(dec_chs[-1], 1, 1)
