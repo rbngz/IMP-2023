@@ -5,5 +5,33 @@ metric:
   goal: minimize
 parameters:
   LEARNING_RATE:
-    min: 0.00001
-    max: 0.1
+    - 0.00001
+    - 0.0001
+    - 0.001
+    - 0.01
+    - 0.1
+  N_PATCHES:
+    - 1
+    - 2
+    - 4
+    - 8
+  PRED_SIZE:
+    - 2
+    - 4
+    - 8
+    - 16
+    - 32
+    - 64
+  BATCH_SIZE:
+    - 4
+    - 8
+    - 16
+    - 32
+    - 64
+    - 128
+  LC_LOSS_WEIGHT:
+    - 0.05
+    - 0.1
+    - 0.2
+    - 0.4
+    - 0.6

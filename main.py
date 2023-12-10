@@ -42,6 +42,7 @@ config = {
     "DECODER_CONFIG": (1024, 512, 256, 128, 64),
     "LC_LOSS_WEIGHT": 0.1,
     "PRE_LOAD": True,
+    "MAX_EPOCHS": 30,
 }
 
 # Read the samples file
@@ -264,7 +265,7 @@ checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_no2_mae", mode=
 
 # Train model
 trainer = L.Trainer(
-    max_epochs=100,
+    max_epochs=config["MAX_EPOCHS"],
     logger=wandb_logger,
     callbacks=[checkpoint_callback],
     log_every_n_steps=400,
