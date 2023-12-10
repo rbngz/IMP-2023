@@ -42,7 +42,9 @@ config = {
     "DECODER_CONFIG": (1024, 512, 256, 128, 64),
     "LC_LOSS_WEIGHT": 0.1,
     "PRE_LOAD": True,
-    "MAX_EPOCHS": 30,
+    "MAX_EPOCHS": 20,
+    "SKIP_CONNECTIONS": True,
+    "INCLUDE_LC": True,
 }
 
 # Read the samples file
@@ -163,7 +165,7 @@ dataloader_val = DataLoader(
 
 # Define Pytorch lightning model
 class Model(L.LightningModule):
-    def __init__(self, model, lr, lc_loss_weight):
+    def __init__(self, model, lr, include_lc, lc_loss_weight):
         super().__init__()
 
         # Set model
@@ -173,10 +175,9 @@ class Model(L.LightningModule):
         self.no2_loss = MSELoss()
         self.no2_mae = L1Loss()
         self.lc_loss = CrossEntropyLoss()
+        self.include_lc = include_lc
         self.lc_loss_weight = lc_loss_weight
         self.lr = lr
-
-        self.save_hyperparameters(ignore=["model"])
 
     def training_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch)
@@ -185,7 +186,8 @@ class Model(L.LightningModule):
         self.log("train_no2_mae", no2_mae)
         self.log("train_lc_loss", lc_loss)
         self.log("train_total_loss", total_loss)
-        return total_loss
+        loss = total_loss if self.include_lc else no2_loss
+        return loss
 
     def validation_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch, batch_idx == 0)
@@ -194,7 +196,8 @@ class Model(L.LightningModule):
         self.log("val_no2_mae", no2_mae)
         self.log("val_lc_loss", lc_loss)
         self.log("val_total_loss", total_loss)
-        return total_loss
+        loss = total_loss if self.include_lc else no2_loss
+        return loss
 
     def test_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch)
@@ -203,7 +206,8 @@ class Model(L.LightningModule):
         self.log("test_no2_mae", no2_mae)
         self.log("test_lc_loss", lc_loss)
         self.log("test_total_loss", total_loss)
-        return total_loss
+        loss = total_loss if self.include_lc else no2_loss
+        return loss
 
     def _step(self, batch, log_predictions=False):
         # Unpack batch
@@ -252,6 +256,7 @@ summary(unet.cuda(), (12, config["PATCH_SIZE"], config["PATCH_SIZE"]))
 model = Model(
     model=unet,
     lr=config["LEARNING_RATE"],
+    include_lc=config["INCLUDE_LC"],
     lc_loss_weight=config["LC_LOSS_WEIGHT"],
 )
 
@@ -268,7 +273,6 @@ trainer = L.Trainer(
     max_epochs=config["MAX_EPOCHS"],
     logger=wandb_logger,
     callbacks=[checkpoint_callback],
-    log_every_n_steps=400,
 )
 trainer.fit(
     model=model, train_dataloaders=dataloader_train, val_dataloaders=dataloader_val

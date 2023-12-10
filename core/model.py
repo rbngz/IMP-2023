@@ -17,7 +17,7 @@ class Block(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, chs=(12, 64, 128, 256, 512, 1024)):
+    def __init__(self, chs):
         super().__init__()
         self.blocks = nn.ModuleList(
             [Block(chs[i], chs[i + 1]) for i in range(len(chs) - 1)]
@@ -37,9 +37,10 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, chs=(1024, 512, 256, 128, 64)):
+    def __init__(self, chs, skip_connections):
         super().__init__()
         self.chs = chs
+        self.skip_connections = skip_connections
         self.upconvs = nn.ModuleList(
             # Check stride in original U-Net paper
             [nn.ConvTranspose2d(chs[i], chs[i + 1], 2, 2) for i in range(len(chs) - 1)]
@@ -51,8 +52,9 @@ class Decoder(nn.Module):
     def forward(self, x, encoder_outputs):
         for i, block in enumerate(self.blocks):
             x = self.upconvs[i](x)
-            cropped_output = self.crop(encoder_outputs[i], x)
-            x = torch.cat([x, cropped_output], dim=1)
+            if self.skip_connections:
+                cropped_output = self.crop(encoder_outputs[i], x)
+                x = torch.cat([x, cropped_output], dim=1)
             x = block(x)
         return x
 
@@ -63,14 +65,15 @@ class Decoder(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(
-        self,
-        enc_chs=(12, 64, 128, 256, 512, 1024),
-        dec_chs=(1024, 512, 256, 128, 64),
-    ):
+    def __init__(self, enc_chs, dec_chs, skip_connections):
         super().__init__()
         self.encoder = Encoder(enc_chs)
-        self.decoder = Decoder(dec_chs)
+
+        # Reduce decoder channels if no skip connections are used
+        if not skip_connections:
+            dec_chs = tuple([ch // 2 for ch in dec_chs])
+
+        self.decoder = Decoder(dec_chs, skip_connections)
         self.no2_head = nn.Conv2d(dec_chs[-1], 1, 1)
         self.land_cover_head = nn.Conv2d(dec_chs[-1], 11, 1)
 
