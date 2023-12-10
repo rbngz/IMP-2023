@@ -16,6 +16,7 @@ from core.dataset import SentinelDataset
 from core.model import UNet
 from src.utils import get_dataset_stats, normalize_rgb_bands
 from src.transforms import BandNormalize, TargetNormalize
+from sklearn.model_selection import train_test_split
 
 
 # Random seed for splitting
@@ -35,6 +36,7 @@ config = {
     "N_PATCHES": 4,
     "PATCH_SIZE": 128,
     "BATCH_SIZE": 8,
+    "PRED_SIZE": 8,
     "LEARNING_RATE": 1e-4,
     "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
     "DECODER_CONFIG": (1024, 512, 256, 128, 64),
@@ -48,8 +50,6 @@ samples_df = pd.read_csv(SAMPLES_PATH, index_col="idx")
 # Remove NA measurements
 samples_df = samples_df[~samples_df["no2"].isna()]
 
-# Random shuffle
-samples_df = samples_df.sample(frac=1)
 
 # Exclude samples for which no valid land cover ground truth is present ~200
 valid_land_cover_stations = []
@@ -65,12 +65,9 @@ samples_df = samples_df.loc[
 
 
 # Split samples dataframe to avoid sampling patches across sets
-df_train, df_val, df_test = np.split(
-    samples_df, [int(0.7 * len(samples_df)), int(0.85 * len(samples_df))]
-)
-print(
-    f"Train set: {len(df_train)}, Validation set: {len(df_val)}, Test set: {len(df_test)}"
-)
+df_train, df_val = train_test_split(samples_df, train_size=0.85)
+
+print(f"Train set: {len(df_train)}, Validation set: {len(df_val)}")
 
 # Get statistics for normalization
 # stats_train = get_dataset_stats(df_train, DATA_DIR)
@@ -127,6 +124,7 @@ dataset_train = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
+    pred_size=config["PRED_SIZE"],
     pre_load=config["PRE_LOAD"],
     s2_transform=s2_transform,
     no2_transform=no2_transform,
@@ -138,25 +136,12 @@ dataset_val = SentinelDataset(
     DATA_DIR,
     n_patches=config["N_PATCHES"],
     patch_size=config["PATCH_SIZE"],
+    pred_size=config["PRED_SIZE"],
     pre_load=config["PRE_LOAD"],
     s2_transform=s2_transform,
     no2_transform=no2_transform,
 )
-
-# Create Test Dataset
-dataset_test = SentinelDataset(
-    df_test,
-    DATA_DIR,
-    n_patches=config["N_PATCHES"],
-    patch_size=config["PATCH_SIZE"],
-    pre_load=config["PRE_LOAD"],
-    s2_transform=s2_transform,
-    no2_transform=no2_transform,
-)
-
-print(
-    f"Train dataset: {len(dataset_train)}, Validation dataset: {len(dataset_val)}, Test dataset: {len(dataset_test)}"
-)
+print(f"Train dataset: {len(dataset_train)}, Validation dataset: {len(dataset_val)}")
 
 # Create Dataloaders
 dataloader_train = DataLoader(
@@ -173,7 +158,6 @@ dataloader_val = DataLoader(
     num_workers=12,
     persistent_workers=True,
 )
-dataloader_test = DataLoader(dataset_test, batch_size=config["BATCH_SIZE"])
 
 
 # Define Pytorch lightning model
@@ -200,7 +184,7 @@ class Model(L.LightningModule):
         self.log("train_no2_mae", no2_mae)
         self.log("train_lc_loss", lc_loss)
         self.log("train_total_loss", total_loss)
-        return no2_loss
+        return total_loss
 
     def validation_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch, batch_idx == 0)
@@ -209,7 +193,7 @@ class Model(L.LightningModule):
         self.log("val_no2_mae", no2_mae)
         self.log("val_lc_loss", lc_loss)
         self.log("val_total_loss", total_loss)
-        return no2_loss
+        return total_loss
 
     def test_step(self, batch, batch_idx):
         no2_loss, no2_mae, lc_loss = self._step(batch)
@@ -218,7 +202,7 @@ class Model(L.LightningModule):
         self.log("test_no2_mae", no2_mae)
         self.log("test_lc_loss", lc_loss)
         self.log("test_total_loss", total_loss)
-        return no2_loss
+        return total_loss
 
     def _step(self, batch, log_predictions=False):
         # Unpack batch

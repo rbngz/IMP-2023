@@ -1,0 +1,9 @@
+program: main.py
+method: grid
+metric:
+  name: val_no2_mae
+  goal: minimize
+parameters:
+  LEARNING_RATE:
+    min: 0.00001
+    max: 0.1
