@@ -49,9 +49,17 @@ class Decoder(nn.Module):
         if not skip_connections:
             block_chs = tuple([ch // 2 for ch in chs])
 
-        self.blocks = nn.ModuleList(
-            [Block(block_chs[i], block_chs[i + 1]) for i in range(len(block_chs) - 1)]
-        )
+            self.blocks = nn.ModuleList(
+                [Block(block_chs[i], block_chs[i]) for i in range(len(block_chs) - 1)]
+            )
+        else:
+            block_chs = chs
+            self.blocks = nn.ModuleList(
+                [
+                    Block(block_chs[i], block_chs[i + 1])
+                    for i in range(len(block_chs) - 1)
+                ]
+            )
 
     def forward(self, x, encoder_outputs):
         for i, block in enumerate(self.blocks):
