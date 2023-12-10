@@ -4,20 +4,18 @@ metric:
   name: val_no2_mae
   goal: minimize
 parameters:
-  MAX_EPOCHS:
-   - 3
-  # LEARNING_RATE:
-  #   values: [0.00001, 0.0001, 0.001, 0.01, 0.1]
-  # N_PATCHES:
-  #   values: [1, 2, 4, 8]
-  # PRED_SIZE:
-  #   values: [2, 4, 8, 16, 32, 64]
-  # BATCH_SIZE:
-  #   values: [4, 8, 16, 32, 64, 128]
+  N_PATCHES:
+    values: [1, 2, 4, 8]
+  BATCH_SIZE:
+    values: [4, 8, 16, 32, 64, 128]
+  PRED_SIZE:
+    values: [2, 4, 8, 16, 32, 64]
+  LEARNING_RATE:
+    values: [0.00001, 0.0001, 0.001, 0.01, 0.1]
   SKIP_CONNECTIONS:
     values: [True, False]
-  # INCLUDE_LC:
-  #   values: [True, False]
-  # LC_LOSS_WEIGHT:
-  #   values: [0.05, 0.1, 0.2, 0.4, 0.6]
+  INCLUDE_LC:
+    values: [True, False]
+  LC_LOSS_WEIGHT:
+    values: [0.05, 0.1, 0.2, 0.4, 0.6]
 
