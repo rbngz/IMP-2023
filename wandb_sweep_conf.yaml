@@ -4,10 +4,10 @@ metric:
   name: val_no2_mae
   goal: minimize
 parameters:
-  INCLUDE_LC:
-    values: [True, False]
-  # LC_LOSS_WEIGHT:
-  #   values: [0.05, 0.1, 0.2, 0.4]
-  SKIP_CONNECTIONS:
-    values: [True, False]
+  # INCLUDE_LC:
+  #   values: [True, False]
+  LC_LOSS_WEIGHT:
+    values: [0.05, 0.1, 0.2, 0.4]
+  # SKIP_CONNECTIONS:
+  #   values: [True, False]
 
