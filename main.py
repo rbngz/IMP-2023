@@ -38,7 +38,7 @@ config = {
     "PATCH_SIZE": 128,
     "BATCH_SIZE": 8,
     "PRED_SIZE": 8,
-    "LEARNING_RATE": 1e-4,
+    "LEARNING_RATE": 0.000005,
     "ENCODER_CONFIG": (12, 64, 128, 256, 512, 1024),
     "DECODER_CONFIG": (1024, 512, 256, 128, 64),
     "SKIP_CONNECTIONS": True,
