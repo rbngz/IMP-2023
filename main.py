@@ -34,7 +34,7 @@ LOG_DIR = "/netscratch2/rubengaviles/imp-2023/logs"
 
 # Hyperparameters
 config = {
-    "N_PATCHES": 4,
+    "N_PATCHES": 1,
     "PATCH_SIZE": 128,
     "BATCH_SIZE": 8,
     "PRED_SIZE": 8,
