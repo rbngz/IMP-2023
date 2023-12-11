@@ -45,7 +45,7 @@ config = {
     "INCLUDE_LC": True,
     "LC_LOSS_WEIGHT": 0.1,
     "PRE_LOAD": True,
-    "MAX_EPOCHS": 20,
+    "MAX_EPOCHS": 50,
 }
 wandb.init(config=config, dir=LOG_DIR, entity="imp-2023", project="IMP-2023")
 
