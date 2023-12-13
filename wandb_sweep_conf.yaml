@@ -6,15 +6,15 @@ metric:
 parameters:
   # INCLUDE_LC:
   #   values: [True, False]
-  # LC_LOSS_WEIGHT:
-  #   values: [0.05, 0.1, 0.2, 0.4]
-  SKIP_CONNECTIONS:
-    values: [True, False]
-  LEARNING_RATE:
-    values:
-      - 0.000005
-      - 0.00001
-      - 0.00005
-      - 0.0001
-      - 0.0005
-      - 0.001
+  LC_LOSS_WEIGHT:
+    values: [0.05, 0.1, 0.2, 0.4]
+  # SKIP_CONNECTIONS:
+  #   values: [True, False]
+  # LEARNING_RATE:
+  #   values:
+  #     - 0.000005
+  #     - 0.00001
+  #     - 0.00005
+  #     - 0.0001
+  #     - 0.0005
+  #     - 0.001

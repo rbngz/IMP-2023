@@ -69,10 +69,37 @@ samples_df = samples_df.loc[
 ]
 
 
+# Random shuffle
+samples_df = samples_df.sample(frac=1)
 # Split samples dataframe to avoid sampling patches across sets
-df_train, df_val = train_test_split(samples_df, train_size=0.85)
+df_train, df_val, df_test = np.split(
+    samples_df, [int(0.7 * len(samples_df)), int(0.85 * len(samples_df))]
+)
 
-print(f"Train set: {len(df_train)}, Validation set: {len(df_val)}")
+print(
+    f"Train set: {len(df_train)}, Validation set: {len(df_val)}, Test set: {len(df_test)}"
+)
+
+# Compute land cover class frequency
+lc_class_count = {}
+for station in df_train["AirQualityStation"]:
+    lc = np.load(os.path.join(land_cover_path, station + ".npy"))
+    classes, counts = np.unique(lc, return_counts=True)
+    for i, cls in enumerate(classes):
+        count = counts[i]
+        curr_count = lc_class_count.get(cls, 0)
+        curr_count += count
+        lc_class_count[cls] = curr_count
+
+sorted_class_counts = sorted(lc_class_count.items())
+
+# Extract the counts and classes as separate lists
+classes, counts = zip(*sorted_class_counts)
+
+# Calculate class weights based on the provided criterion
+max_class_size = max(counts)
+class_weights = [max_class_size / count for count in counts]
+
 
 # Get statistics for normalization
 # stats_train = get_dataset_stats(df_train, DATA_DIR)
@@ -167,7 +194,7 @@ dataloader_val = DataLoader(
 
 # Define Pytorch lightning model
 class Model(L.LightningModule):
-    def __init__(self, model, lr, include_lc, lc_loss_weight):
+    def __init__(self, model, lr, include_lc, lc_loss_weight, lc_class_weights):
         super().__init__()
 
         # Set model
@@ -176,7 +203,7 @@ class Model(L.LightningModule):
         # Set hyperparameters
         self.no2_loss = MSELoss()
         self.no2_mae = L1Loss()
-        self.lc_loss = CrossEntropyLoss()
+        self.lc_loss = CrossEntropyLoss(weight=torch.tensor(lc_class_weights))
         self.include_lc = include_lc
         self.lc_loss_weight = lc_loss_weight
         self.lr = lr
@@ -264,6 +291,7 @@ model = Model(
     lr=wandb.config["LEARNING_RATE"],
     include_lc=wandb.config["INCLUDE_LC"],
     lc_loss_weight=wandb.config["LC_LOSS_WEIGHT"],
+    lc_class_weights=class_weights,
 )
 
 # Get logger for weights & biases
