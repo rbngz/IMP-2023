@@ -99,6 +99,8 @@ classes, counts = zip(*sorted_class_counts)
 # Calculate class weights based on the provided criterion
 max_class_size = max(counts)
 class_weights = [max_class_size / count for count in counts]
+class_weights = np.array(class_weights).astype(np.float32)
+
 print(class_weights)
 
 
