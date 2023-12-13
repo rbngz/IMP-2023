@@ -99,6 +99,7 @@ classes, counts = zip(*sorted_class_counts)
 # Calculate class weights based on the provided criterion
 max_class_size = max(counts)
 class_weights = [max_class_size / count for count in counts]
+print(class_weights)
 
 
 # Get statistics for normalization
