@@ -19,6 +19,7 @@ class SentinelDataset(Dataset):
         pre_load=False,
         s2_transform=None,
         no2_transform=None,
+        us=False,
     ) -> None:
         """Dataset that contains n patches per satellite image"""
         super().__init__()
@@ -57,6 +58,7 @@ class SentinelDataset(Dataset):
         self.pre_load = pre_load
         self.s2_transform = s2_transform
         self.no2_transform = no2_transform
+        self.us = us
 
         # Pre-load images
         images = []
@@ -80,9 +82,14 @@ class SentinelDataset(Dataset):
 
         # Load land cover ground truth
         station = self.stations.iloc[data_idx]
-        land_cover_path = os.path.join(self.data_dir, "worldcover", station + ".npy")
-        land_cover = np.load(land_cover_path).astype(np.int64)
-        land_cover = land_cover // 10
+        if self.us:
+            land_cover = np.zeros((200, 200)).astype(np.int64)
+        else:
+            land_cover_path = os.path.join(
+                self.data_dir, "worldcover", station + ".npy"
+            )
+            land_cover = np.load(land_cover_path).astype(np.int64)
+            land_cover = land_cover // 10
 
         # Retrieve NO2 measurement for this sample
         no2 = self.measurements.iloc[data_idx]
@@ -126,11 +133,22 @@ class SentinelDataset(Dataset):
 
     def get_full_image(self, index):
         # Load data from path according to image index
-        img_path = os.path.join(
-            self.data_dir, "sentinel-2-eea", self.img_paths.iloc[index]
-        )
+        s2_path_name = "sentinel-2-epa" if self.us else "sentinel-2-eea"
+        img_path = os.path.join(self.data_dir, s2_path_name, self.img_paths.iloc[index])
         img = np.load(img_path).astype(np.float32)
         return img
+
+    def get_coords_distribution(self):
+        # Count coordinate occurences
+        sum_coords = np.zeros((self.patch_size, self.patch_size)).astype(int)
+        for _ in range(len(self)):
+            offset_height, offset_width = self._get_offsets()
+            coord_height = self.MEASUREMENT_LOC_XY - offset_height
+            coord_width = self.MEASUREMENT_LOC_XY - offset_width
+            coords = (coord_height, coord_width)
+            sum_coords[coords] += 1
+
+        return sum_coords
 
     def __len__(self):
         """Return length considering the number of patches per sample"""
