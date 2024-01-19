@@ -5,9 +5,12 @@ data/sentinel-2-epa/*
 !data/sentinel-2-epa/.gitkeep 
 data/sentinel-5p-epa/*
 !data/sentinel-2-epa/.gitkeep 
+data/sentinel-5p-epa-numpy/*
+!data/sentinel-2-epa-numpy/.gitkeep 
 data/worldcover/*
 !data/worldcover/.gitkeep 
-
+no2_visualization/*
+!no2_visualization/.gitkeep 
 # wandb logs
 src/IMP-2023
 src/wandb
