@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def get_dataset_stats(df, data_dir):
     # Placeholder to store all images from df
-    img_list = np.empty((len(df), 200, 200, 12))
+    img_list = np.empty((len(df), 200, 200, 13))
 
     # Iterate over entire dataframe
     for i, (_, data) in tqdm(enumerate(df.iterrows())):
@@ -16,6 +16,13 @@ def get_dataset_stats(df, data_dir):
         img_path = data["img_path"]
         img_path = os.path.join(data_dir, "sentinel-2-eea", img_path)
         img = np.load(img_path)
+
+        s5p_path_name = "sentinel-5p-eea-numpy-resized"
+        station_name = data["AirQualityStation"]
+        s5p_path = os.path.join(data_dir, s5p_path_name, station_name + ".npy")
+        s5p = np.load((s5p_path))
+
+        img = np.dstack((img, s5p))
 
         # Store satellite image
         img_list[i] = img

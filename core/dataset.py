@@ -133,10 +133,22 @@ class SentinelDataset(Dataset):
 
     def get_full_image(self, index):
         # Load data from path according to image index
+
+        s5p_path_name = (
+            "sentinel-5p-epa-numpy-resized"
+            if self.us
+            else "sentinel-5p-eea-numpy-resized"
+        )
+        station_name = self.stations.iloc[index]
+        s5p_path = os.path.join(self.data_dir, s5p_path_name, station_name + ".npy")
+        s5p = np.load(s5p_path).astype(np.float32)
+
         s2_path_name = "sentinel-2-epa" if self.us else "sentinel-2-eea"
         img_path = os.path.join(self.data_dir, s2_path_name, self.img_paths.iloc[index])
         img = np.load(img_path).astype(np.float32)
-        return img
+
+        data = np.dstack((img, s5p))
+        return data
 
     def get_coords_distribution(self):
         # Count coordinate occurences
