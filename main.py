@@ -290,7 +290,7 @@ unet = UNet(
     wandb.config["DECODER_CONFIG"],
     wandb.config["SKIP_CONNECTIONS"],
 )
-summary(unet.cuda(), (12, wandb.config["PATCH_SIZE"], wandb.config["PATCH_SIZE"]))
+summary(unet.cuda(), (13, wandb.config["PATCH_SIZE"], wandb.config["PATCH_SIZE"]))
 model = Model(
     model=unet,
     lr=wandb.config["LEARNING_RATE"],
