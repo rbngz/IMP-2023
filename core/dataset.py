@@ -19,7 +19,7 @@ class SentinelDataset(Dataset):
         pre_load=False,
         s2_transform=None,
         no2_transform=None,
-        us=False,
+        data_source="eea",
     ) -> None:
         """Dataset that contains n patches per satellite image"""
         super().__init__()
@@ -58,7 +58,7 @@ class SentinelDataset(Dataset):
         self.pre_load = pre_load
         self.s2_transform = s2_transform
         self.no2_transform = no2_transform
-        self.us = us
+        self.data_source = data_source
 
         # Pre-load images
         images = []
@@ -82,7 +82,7 @@ class SentinelDataset(Dataset):
 
         # Load land cover ground truth
         station = self.stations.iloc[data_idx]
-        if self.us:
+        if self.data_source == "epa":
             land_cover = np.zeros((200, 200)).astype(np.int64)
         else:
             land_cover_path = os.path.join(
@@ -134,16 +134,13 @@ class SentinelDataset(Dataset):
     def get_full_image(self, index):
         # Load data from path according to image index
 
-        s5p_path_name = (
-            "sentinel-5p-epa-numpy-resized"
-            if self.us
-            else "sentinel-5p-eea-numpy-resized"
-        )
+        s5p_path_name = f"sentinel-5p-{self.data_source}-numpy-resized"
+
         station_name = self.stations.iloc[index]
         s5p_path = os.path.join(self.data_dir, s5p_path_name, station_name + ".npy")
         s5p = np.load(s5p_path).astype(np.float32)
 
-        s2_path_name = "sentinel-2-epa" if self.us else "sentinel-2-eea"
+        s2_path_name = f"sentinel-2-{self.data_source}"
         img_path = os.path.join(self.data_dir, s2_path_name, self.img_paths.iloc[index])
         img = np.load(img_path).astype(np.float32)
 
