@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 
-from utils import normalize_rgb_bands
+from .utils import normalize_rgb_bands
 
 
 def plot_patch(patch, no2=None, coords=None):
