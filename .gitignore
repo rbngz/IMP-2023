@@ -3,19 +3,23 @@ data/sentinel-2-eea/*
 !data/sentinel-2-eea/.gitkeep 
 data/sentinel-2-epa/*
 !data/sentinel-2-epa/.gitkeep 
+
+data/sentinel-5p-eea/*
+!data/sentinel-5p-eea/.gitkeep 
 data/sentinel-5p-epa/*
-!data/sentinel-2-epa/.gitkeep 
-data/sentinel-5p-epa-numpy/*
-!data/sentinel-2-epa-numpy/.gitkeep 
+!data/sentinel-5p-epa/.gitkeep 
+
+data/sentinel-5p-eea-numpy-resized/*
+!data/sentinel-5p-eea-numpy-resized/.gitkeep 
 data/sentinel-5p-epa-numpy-resized/*
-!data/sentinel-2-epa-numpy-resized/.gitkeep 
+!data/sentinel-5p-epa-numpy-resized/.gitkeep 
+
 data/worldcover/*
 !data/worldcover/.gitkeep 
+
 no2_visualization/*
 !no2_visualization/.gitkeep 
-# wandb logs
-src/IMP-2023
-src/wandb
+
 
 # Mac specific files
 .DS_Store
