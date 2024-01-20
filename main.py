@@ -15,10 +15,8 @@ from torchsummary import summary
 
 from core.dataset import SentinelDataset
 from core.model import UNet
-from src.utils import get_dataset_stats, normalize_rgb_bands
-from src.transforms import BandNormalize, TargetNormalize
-from sklearn.model_selection import train_test_split
-
+from core.utils import get_dataset_stats, normalize_rgb_bands
+from core.transforms import BandNormalize, TargetNormalize
 
 # Random seed for splitting
 SEED = 42
@@ -41,8 +39,8 @@ config = {
     "LEARNING_RATE": 0.000005,
     "ENCODER_CONFIG": (13, 64, 128, 256, 512, 1024),
     "DECODER_CONFIG": (1024, 512, 256, 128, 64),
-    "SKIP_CONNECTIONS": True,
-    "INCLUDE_LC": True,
+    "SKIP_CONNECTIONS": False,
+    "INCLUDE_LC": False,
     "LC_LOSS_WEIGHT": 0.1,
     "PRE_LOAD": True,
     "MAX_EPOCHS": 100,
